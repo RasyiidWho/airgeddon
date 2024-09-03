@@ -9873,9 +9873,9 @@ function set_hostapd_config() {
 	{
 	echo -e "interface=${interface}"
 	echo -e "driver=nl80211"
-	echo -e "beacon_int=15"
+	echo -e "beacon_int=10"
 	echo -e "preamble=1"
-	# echo -e "channel=13"
+	echo -e "channel=13"
 	echo -e "dtim_period=1"
 
 	echo -e "rts_threshold=0"
@@ -9886,7 +9886,7 @@ function set_hostapd_config() {
 	# echo -e "ap_max_inactivity=30"
 	echo -e "ssid=${essid}"
 	echo -e "bssid=${et_bssid}"
-	echo -e "channel=${channel}"
+	# echo -e "channel=${channel}"
 	} >> "${tmpdir}${hostapd_file}"
 
 	if [ "${channel}" -gt 14 ]; then
@@ -12451,8 +12451,8 @@ function recover_current_channel() {
 	local recovered_channel
 	recovered_channel=$(cat "${tmpdir}${channelfile}" 2> /dev/null)
 	if [ -n "${recovered_channel}" ]; then
-		# channel="${recovered_channel}"
-		channel="13"
+		channel="${recovered_channel}"
+		# channel="13"
 	fi
 }
 
@@ -13993,8 +13993,8 @@ function select_target() {
 
 	essid=${network_names[${selected_target_network}]}
 	check_hidden_essid "normal" "verify"
-	# channel=${channels[${selected_target_network}]}
-	channel="13"
+	channel=${channels[${selected_target_network}]}
+	# channel="13"
 	bssid=${macs[${selected_target_network}]}
 	enc=${encs[${selected_target_network}]}
 }

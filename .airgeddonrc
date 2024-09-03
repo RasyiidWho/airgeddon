@@ -26,7 +26,7 @@ AIRGEDDON_5GHZ_ENABLED=true
 AIRGEDDON_FORCE_IPTABLES=false
 
 #Enabled true / Disabled false - Force to kill Network Manager before launching Evil Twin attacks - Default value true
-AIRGEDDON_FORCE_NETWORK_MANAGER_KILLING=true
+AIRGEDDON_FORCE_NETWORK_MANAGER_KILLING=false
 
 #Available values: mdk3, mdk4 - Define which mdk version is going to be used - Default value mdk4
 AIRGEDDON_MDK_VERSION=mdk4
