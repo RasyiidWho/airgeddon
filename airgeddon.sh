@@ -4130,9 +4130,9 @@ function set_wep_script() {
 
 		wep_script_processes=()
 
-		manage_output "-bg \"#000000\" -fg \"#FFFFFF\" -geometry ${g5_topright_window} -T \"Capturing WEP Data\"" "airodump-ng -d ${bssid} -c ${channel} --encrypt WEP -w \"${tmpdir}${wep_data}\" ${interface}" "Capturing WEP Data" "active"
+		manage_output "-bg \"#000000\" -fg \"#FFFFFF\" -geometry ${g5_topright_window} -T \"Capturing WEP Data\"" "airodump-ng --manufacturer -d ${bssid} -c ${channel} --encrypt WEP -w \"${tmpdir}${wep_data}\" ${interface}" "Capturing WEP Data" "active"
 		if [ "\${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-			get_tmux_process_id "airodump-ng -d ${bssid} -c ${channel} --encrypt WEP -w \"${tmpdir}${wep_data}\" ${interface}"
+			get_tmux_process_id "airodump-ng --manufacturer -d ${bssid} -c ${channel} --encrypt WEP -w \"${tmpdir}${wep_data}\" ${interface}"
 			wep_script_capture_pid="\${global_process_pid}"
 			global_process_pid=""
 		else
@@ -4597,7 +4597,7 @@ function launch_dos_pursuit_mode_attack() {
 	fi
 
 	sleep "${dos_delay}"
-	airodump-ng -w "${tmpdir}dos_pm" "${interface_pursuit_mode_scan}" --band "${airodump_band_modifier}" > /dev/null 2>&1 &
+	airodump-ng --manufacturer -w "${tmpdir}dos_pm" "${interface_pursuit_mode_scan}" --band "${airodump_band_modifier}" > /dev/null 2>&1 &
 	dos_pursuit_mode_scan_pid=$!
 	dos_pursuit_mode_pids+=("${dos_pursuit_mode_scan_pid}")
 
@@ -9147,6 +9147,11 @@ function set_captive_portal_language() {
 		;;
 	esac
 
+	read -rp "Channel for hostapd (target channel is ${channel}) > " replace_channel
+	if ["${replace_channel}" = ""]; then
+		replace_channel="13"
+	fi
+
 	return 0
 }
 
@@ -9870,13 +9875,26 @@ function set_hostapd_config() {
 	# et_bssid=$(printf %s%X%s\\n "${bssid::10}" "${different_mac_digit}" "${bssid:11}")
 	et_bssid=$(printf "${bssid}")
 
+	echo "replace channel is ${replace_channel}"
+
 	{
 	echo -e "interface=${interface}"
 	echo -e "driver=nl80211"
-	echo -e "beacon_int=10"
-	echo -e "preamble=1"
-	echo -e "channel=13"
-	echo -e "dtim_period=1"
+	echo -e "beacon_int=15"
+	echo -e "preamble=0"
+	echo -e "channel=${replace_channel}"
+	echo -e "dtim_period=255"
+	echo -e "ht_capab=[HT40+][SHORT-GI-20][SHORT-GI-40]"
+	echo -e "supported_rates=10"
+	echo -e "basic_rates=10"
+	# supported_rates=60 90 120 180 240 360 480 540
+	# basic_rates=60 120
+	# supported_rates=12 18 24 36 48 54
+	# basic_rates=12 24
+	echo -e "ignore_broadcast_ssid=0"
+	echo -e "wmm_enabled=0"
+	echo -e "disassoc_low_ack=0"
+	echo -e "ap_isolate=0"
 
 	echo -e "rts_threshold=0"
 	echo -e "fragm_threshold=256"
@@ -13071,7 +13089,7 @@ function read_and_clean_path() {
 	settings="$(shopt -p extglob)"
 	shopt -s extglob
 
-	echo -en '> '
+	echo -en 'File location > '
 	var=$(read -re _var; echo -n "${_var}")
 	var=$(fix_autocomplete_chars "${var}")
 	local regexp='^[ '"'"']*(.*[^ '"'"'])[ '"'"']*$'
@@ -13428,9 +13446,9 @@ function capture_handshake_window() {
 
 	rm -rf "${tmpdir}handshake"* > /dev/null 2>&1
 	recalculate_windows_sizes
-	manage_output "+j -sb -rightbar -geometry ${g1_topright_window} -T \"Capturing Handshake\"" "airodump-ng -c ${channel} -d ${bssid} -w ${tmpdir}handshake ${interface}" "Capturing Handshake" "active"
+	manage_output "+j -sb -rightbar -geometry ${g1_topright_window} -T \"Capturing Handshake\"" "airodump-ng --manufacturer -c ${channel} -d ${bssid} -w ${tmpdir}handshake ${interface}" "Capturing Handshake" "active"
 	if [ "${AIRGEDDON_WINDOWS_HANDLING}" = "tmux" ]; then
-		get_tmux_process_id "airodump-ng -c ${channel} -d ${bssid} -w ${tmpdir}handshake ${interface}"
+		get_tmux_process_id "airodump-ng --manufacturer -c ${channel} -d ${bssid} -w ${tmpdir}handshake ${interface}"
 		processidcapture="${global_process_pid}"
 		global_process_pid=""
 	else
@@ -13598,8 +13616,8 @@ function explore_for_targets_option() {
 	fi
 
 	recalculate_windows_sizes
-	manage_output "+j -bg \"#000000\" -fg \"#FFFFFF\" -geometry ${g1_topright_window} -T \"Exploring for targets\"" "airodump-ng -w ${tmpdir}nws${cypher_cmd}${interface} --band ${airodump_band_modifier}" "Exploring for targets" "active"
-	wait_for_process "airodump-ng -w ${tmpdir}nws${cypher_cmd}${interface} --band ${airodump_band_modifier}" "Exploring for targets"
+	manage_output "+j -bg \"#000000\" -fg \"#FFFFFF\" -geometry ${g1_topright_window} -T \"Exploring for targets\"" "airodump-ng --manufacturer -w ${tmpdir}nws${cypher_cmd}${interface} --band ${airodump_band_modifier}" "Exploring for targets" "active"
+	wait_for_process "airodump-ng --manufacturer -w ${tmpdir}nws${cypher_cmd}${interface} --band ${airodump_band_modifier}" "Exploring for targets"
 	targetline=$(awk '/(^Station[s]?|^Client[es]?)/{print NR}' "${tmpdir}nws-01.csv" 2> /dev/null)
 	targetline=$((targetline - 1))
 	head -n "${targetline}" "${tmpdir}nws-01.csv" &> "${tmpdir}nws.csv"
@@ -14190,6 +14208,8 @@ function et_prerequisites() {
 				;;
 			esac
 		else
+			echo
+			echo 'Default location is : /root/handshake-'${bssid}'.cap'
 			ask_et_handshake_file
 		fi
 		retry_handshake_capture=0
