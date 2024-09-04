@@ -1,3 +1,0 @@
-dhcpd -d -cf ag.dhcpd.conf putih
-dnsmasq -C ag.dnsmasq.conf
-hostapd ag.hostapd.conf
