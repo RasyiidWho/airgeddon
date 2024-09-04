@@ -1,0 +1,14 @@
+Internet Systems Consortium DHCP Server 4.4.1
+Copyright 2004-2018 Internet Systems Consortium.
+All rights reserved.
+For info, please visit https://www.isc.org/software/dhcp/
+Config file: /etc/dhcp/ag.dhcpd.conf
+Database file: /var/lib/dhcp/dhcpd.leases
+PID file: /var/run/dhcpd.pid
+Wrote 2 leases to leases file.
+Listening on LPF/ireng/14:4d:67:2e:2e:78/192.169.1.0/24
+Sending on   LPF/ireng/14:4d:67:2e:2e:78/192.169.1.0/24
+Sending on   Socket/fallback/fallback-net
+Server starting service.
+DHCPREQUEST for 10.10.10.124 from 14:4d:67:2e:2e:78 via ireng: wrong network.
+DHCPNAK on 10.10.10.124 to 14:4d:67:2e:2e:78 via ireng
